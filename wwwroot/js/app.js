@@ -11,7 +11,6 @@ const loadMoreBtn = document.getElementById("load-more");
 const suggestions = document.getElementById("product-suggestions");
 const difficultyButtons = document.querySelectorAll(".difficulty-btn");
 
-const FAV_KEY = "recipefinder:favorites";
 const PAGE_SIZE = 4;
 
 let selectedDifficulty = "all";
@@ -19,7 +18,6 @@ let ingredients = [];
 let lastRecipes = [];
 let selectedId = null;
 let visibleCount = PAGE_SIZE;
-let favorites = loadFavorites();
 
 difficultyButtons.forEach((button) => {
   button.addEventListener("click", () => {
@@ -177,7 +175,7 @@ function renderResults() {
   results.innerHTML = slice
     .map((recipe, index) => {
       const isBest = index === 0 && recipe.hasAllIngredients;
-      const isFav = favorites.has(String(recipe.id));
+      const isFav = !!recipe.isFavorite;
       const isSelected = recipe.id === selectedId;
       const meta = recipeMeta(recipe);
 
@@ -221,9 +219,9 @@ function renderResults() {
   });
 
   results.querySelectorAll("[data-fav]").forEach((button) => {
-    button.addEventListener("click", (event) => {
+    button.addEventListener("click", async (event) => {
       event.stopPropagation();
-      toggleFavorite(button.dataset.fav);
+      await toggleFavorite(button.dataset.fav);
       renderResults();
     });
   });
@@ -319,21 +317,20 @@ function difficultyLabel(value) {
   }
 }
 
-function loadFavorites() {
+async function toggleFavorite(id) {
   try {
-    const raw = localStorage.getItem(FAV_KEY);
-    const list = raw ? JSON.parse(raw) : [];
-    return new Set(Array.isArray(list) ? list.map(String) : []);
-  } catch {
-    return new Set();
-  }
-}
+    const response = await fetch(`/api/Recipes/${id}/favorite`, { method: "POST" });
+    if (!response.ok) throw new Error("status " + response.status);
 
-function toggleFavorite(id) {
-  const key = String(id);
-  if (favorites.has(key)) favorites.delete(key);
-  else favorites.add(key);
-  localStorage.setItem(FAV_KEY, JSON.stringify([...favorites]));
+    const data = await response.json();
+    const recipe = lastRecipes.find((item) => item.id === Number(id));
+    if (recipe) {
+      recipe.isFavorite = data.isFavorite;
+    }
+  } catch (error) {
+    console.error(error);
+    status.textContent = "Не удалось обновить избранное.";
+  }
 }
 
 async function loadProductSuggestions() {

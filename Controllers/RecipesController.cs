@@ -21,18 +21,9 @@ public class RecipesController : ControllerBase
     {
         var recipes = await _db.Recipes
             .Include(recipe => recipe.Products)
-            .Select(recipe => new
-            {
-                recipe.Id,
-                recipe.Name,
-                recipe.Instructions,
-                recipe.ImageUrl,
-                recipe.Difficulty,
-                Products = recipe.Products.Select(product => product.Name).ToList()
-            })
             .ToListAsync();
 
-        return Ok(recipes);
+        return Ok(recipes.Select(MapRecipe));
     }
 
     [HttpGet("products")]
@@ -44,6 +35,33 @@ public class RecipesController : ControllerBase
             .ToListAsync();
 
         return Ok(products);
+    }
+
+    [HttpGet("favorites")]
+    public async Task<IActionResult> GetFavorites()
+    {
+        var favorites = await _db.Recipes
+            .Include(recipe => recipe.Products)
+            .Where(recipe => recipe.IsFavorite)
+            .ToListAsync();
+
+        return Ok(favorites.Select(MapRecipe));
+    }
+
+    // Переключает избранное: true ↔ false
+    [HttpPost("{id:int}/favorite")]
+    public async Task<IActionResult> ToggleFavorite(int id)
+    {
+        var recipe = await _db.Recipes.FindAsync(id);
+        if (recipe is null)
+        {
+            return NotFound($"Рецепт {id} не найден");
+        }
+
+        recipe.IsFavorite = !recipe.IsFavorite;
+        await _db.SaveChangesAsync();
+
+        return Ok(new { recipe.Id, recipe.IsFavorite });
     }
 
     [HttpPost("search")]
@@ -84,6 +102,7 @@ public class RecipesController : ControllerBase
                     recipe.Instructions,
                     recipe.ImageUrl,
                     recipe.Difficulty,
+                    recipe.IsFavorite,
                     Products = products,
                     HaveProducts = have,
                     MissingProducts = missing,
@@ -99,4 +118,15 @@ public class RecipesController : ControllerBase
 
         return Ok(matched);
     }
+
+    private static object MapRecipe(Recipe recipe) => new
+    {
+        recipe.Id,
+        recipe.Name,
+        recipe.Instructions,
+        recipe.ImageUrl,
+        recipe.Difficulty,
+        recipe.IsFavorite,
+        Products = recipe.Products.Select(product => product.Name).ToList()
+    };
 }

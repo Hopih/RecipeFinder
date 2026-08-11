@@ -14,6 +14,9 @@ public class Recipe
     // easy | medium | hard
     public string Difficulty { get; set; } = "easy";
 
+    // Избранное — хранится в БД
+    public bool IsFavorite { get; set; }
+
     // Продукты, нужные для этого рецепта
     public List<Product> Products { get; set; } = [];
 }
