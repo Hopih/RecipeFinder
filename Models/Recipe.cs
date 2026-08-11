@@ -8,6 +8,12 @@ public class Recipe
 
     public string Instructions { get; set; } = string.Empty;
 
+    // Ссылка на фото блюда (показывается на фронте)
+    public string ImageUrl { get; set; } = string.Empty;
+
+    // easy | medium | hard
+    public string Difficulty { get; set; } = "easy";
+
     // Продукты, нужные для этого рецепта
     public List<Product> Products { get; set; } = [];
 }
