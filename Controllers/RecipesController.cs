@@ -30,11 +30,11 @@ public class RecipesController : ControllerBase
     public async Task<IActionResult> GetProducts()
     {
         var products = await _db.Products
+            .Include(product => product.Recipes)
             .OrderBy(product => product.Name)
-            .Select(product => product.Name)
             .ToListAsync();
 
-        return Ok(products);
+        return Ok(products.Select(MapProduct));
     }
 
     [HttpGet("favorites")]
@@ -88,29 +88,7 @@ public class RecipesController : ControllerBase
             .Where(recipe =>
                 (string.Equals(recipe.Difficulty, difficulty, StringComparison.OrdinalIgnoreCase) || difficulty == "all") &&
                 recipe.Products.Any(product => normalized.Contains(product.Name.ToLower())))
-            .Select(recipe =>
-            {
-                var products = recipe.Products.Select(product => product.Name).ToList();
-                var have = products.Where(name => normalized.Contains(name.ToLower())).ToList();
-                var missing = products.Where(name => !normalized.Contains(name.ToLower())).ToList();
-                var hasAll = missing.Count == 0;
-
-                return new
-                {
-                    recipe.Id,
-                    recipe.Name,
-                    recipe.Instructions,
-                    recipe.ImageUrl,
-                    recipe.Difficulty,
-                    recipe.IsFavorite,
-                    Products = products,
-                    HaveProducts = have,
-                    MissingProducts = missing,
-                    MatchCount = have.Count,
-                    TotalCount = products.Count,
-                    HasAllIngredients = hasAll
-                };
-            })
+            .Select(recipe => MapSearchRecipe(recipe, normalized))
             .OrderByDescending(recipe => recipe.HasAllIngredients)
             .ThenByDescending(recipe => recipe.MatchCount)
             .ThenBy(recipe => recipe.TotalCount - recipe.MatchCount)
@@ -129,4 +107,48 @@ public class RecipesController : ControllerBase
         recipe.IsFavorite,
         Products = recipe.Products.Select(product => product.Name).ToList()
     };
+
+    private static object MapProduct(Product product) => new
+    {
+        product.Id,
+        product.Name,
+        RecipesCount = product.Recipes.Count
+    };
+
+    private static SearchRecipeDto MapSearchRecipe(Recipe recipe, HashSet<string> normalized)
+    {
+        var products = recipe.Products.Select(product => product.Name).ToList();
+        var have = products.Where(name => normalized.Contains(name.ToLower())).ToList();
+        var missing = products.Where(name => !normalized.Contains(name.ToLower())).ToList();
+
+        return new SearchRecipeDto(
+            recipe.Id,
+            recipe.Name,
+            recipe.Instructions,
+            recipe.ImageUrl,
+            recipe.Difficulty,
+            recipe.IsFavorite,
+            products,
+            have,
+            missing,
+            have.Count,
+            products.Count,
+            missing.Count == 0
+        );
+    }
+
+    private sealed record SearchRecipeDto(
+        int Id,
+        string Name,
+        string Instructions,
+        string ImageUrl,
+        string Difficulty,
+        bool IsFavorite,
+        List<string> Products,
+        List<string> HaveProducts,
+        List<string> MissingProducts,
+        int MatchCount,
+        int TotalCount,
+        bool HasAllIngredients
+    );
 }

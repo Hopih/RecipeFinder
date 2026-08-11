@@ -10,12 +10,20 @@ const sortSelect = document.getElementById("sort-select");
 const loadMoreBtn = document.getElementById("load-more");
 const suggestions = document.getElementById("product-suggestions");
 const difficultyButtons = document.querySelectorAll(".difficulty-btn");
+const timeFilter = document.getElementById("time-filter");
+const typeFilter = document.getElementById("type-filter");
+const historyEl = document.getElementById("search-history");
+const historyEmpty = document.getElementById("history-empty");
+const recommendations = document.getElementById("recommended-results");
 
 const PAGE_SIZE = 4;
+const HISTORY_KEY = "recipefinder:history";
 
 let selectedDifficulty = "all";
 let ingredients = [];
 let lastRecipes = [];
+let searchedRecipes = [];
+let recommendedRecipes = [];
 let selectedId = null;
 let visibleCount = PAGE_SIZE;
 
@@ -28,6 +36,24 @@ difficultyButtons.forEach((button) => {
 });
 
 addBtn.addEventListener("click", () => addIngredientFromInput());
+document.getElementById("clear-products").addEventListener("click", () => {
+  ingredients = [];
+  renderTags();
+});
+
+document.querySelectorAll("[data-quick-product]").forEach((button) => {
+  button.addEventListener("click", () => addIngredient(button.dataset.quickProduct));
+});
+
+document.querySelectorAll("[data-collection]").forEach((button) => {
+  button.addEventListener("click", () => {
+    ingredients = button.dataset.collection.split(",");
+    renderTags();
+    form.requestSubmit();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  });
+});
+
 input.addEventListener("keydown", (event) => {
   if (event.key === "Enter") {
     event.preventDefault();
@@ -38,7 +64,10 @@ input.addEventListener("keydown", (event) => {
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
   addIngredientFromInput();
+  await searchRecipes();
+});
 
+async function searchRecipes() {
   if (ingredients.length === 0) {
     status.textContent = "Добавь хотя бы один продукт.";
     workspace.hidden = true;
@@ -65,7 +94,9 @@ form.addEventListener("submit", async (event) => {
       throw new Error("Сервер вернул ошибку: " + response.status);
     }
 
-    lastRecipes = await response.json();
+    searchedRecipes = await response.json();
+    applyFilters();
+    saveSearchHistory();
     visibleCount = PAGE_SIZE;
     applySort();
     renderResults();
@@ -74,7 +105,7 @@ form.addEventListener("submit", async (event) => {
     workspace.hidden = true;
     console.error(error);
   }
-});
+}
 
 sortSelect.addEventListener("change", () => {
   applySort();
@@ -86,12 +117,41 @@ loadMoreBtn.addEventListener("click", () => {
   renderResults();
 });
 
+[timeFilter, typeFilter].forEach((select) => {
+  select.addEventListener("change", () => {
+    if (searchedRecipes.length === 0) return;
+    applyFilters();
+    applySort();
+    renderResults();
+  });
+});
+
 document.getElementById("theme-btn")?.addEventListener("click", () => {
   document.body.classList.toggle("is-light");
 });
 
 loadProductSuggestions();
+loadRecommendations();
+renderSearchHistory();
+applyProductFromQuery();
 renderTags();
+
+function applyProductFromQuery() {
+  const params = new URLSearchParams(window.location.search);
+  const product = params.get("product");
+  if (product) {
+    addIngredient(product);
+  }
+}
+
+function addIngredient(name) {
+  const value = String(name || "").trim();
+  if (!value) return;
+  if (!ingredients.some((item) => item.toLowerCase() === value.toLowerCase())) {
+    ingredients.push(value);
+    renderTags();
+  }
+}
 
 function addIngredientFromInput() {
   const value = input.value.trim();
@@ -103,13 +163,10 @@ function addIngredientFromInput() {
     .filter(Boolean);
 
   for (const part of parts) {
-    if (!ingredients.some((item) => item.toLowerCase() === part.toLowerCase())) {
-      ingredients.push(part);
-    }
+    addIngredient(part);
   }
 
   input.value = "";
-  renderTags();
 }
 
 function removeIngredient(name) {
@@ -133,6 +190,59 @@ function renderTags() {
   });
 }
 
+function applyFilters() {
+  const maxMinutes = timeFilter.value === "all" ? Infinity : Number(timeFilter.value);
+  const selectedType = typeFilter.value;
+
+  lastRecipes = searchedRecipes.filter((recipe) => {
+    const meta = recipeMeta(recipe);
+    return meta.minutes <= maxMinutes && (selectedType === "all" || meta.type === selectedType);
+  });
+}
+
+function saveSearchHistory() {
+  const history = readSearchHistory();
+  const current = [...ingredients];
+  const signature = current.map((item) => item.toLowerCase()).sort().join("|");
+  const unique = history.filter(
+    (entry) => entry.map((item) => item.toLowerCase()).sort().join("|") !== signature
+  );
+
+  localStorage.setItem(HISTORY_KEY, JSON.stringify([current, ...unique].slice(0, 4)));
+  renderSearchHistory();
+}
+
+function readSearchHistory() {
+  try {
+    const value = JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]");
+    return Array.isArray(value) ? value.filter(Array.isArray) : [];
+  } catch {
+    return [];
+  }
+}
+
+function renderSearchHistory() {
+  const history = readSearchHistory();
+  historyEmpty.hidden = history.length > 0;
+  historyEl.innerHTML = history
+    .map(
+      (entry, index) => `
+        <button type="button" data-history-index="${index}">
+          <span>${escapeHtml(entry.join(", "))}</span>
+          <small>Повторить поиск →</small>
+        </button>`
+    )
+    .join("");
+
+  historyEl.querySelectorAll("[data-history-index]").forEach((button) => {
+    button.addEventListener("click", () => {
+      ingredients = [...history[Number(button.dataset.historyIndex)]];
+      renderTags();
+      form.requestSubmit();
+    });
+  });
+}
+
 function applySort() {
   const rank = { easy: 1, medium: 2, hard: 3 };
   const mode = sortSelect.value;
@@ -152,6 +262,72 @@ function applySort() {
       return b.matchCount - a.matchCount;
     }
     return (a.totalCount - a.matchCount) - (b.totalCount - b.matchCount);
+  });
+}
+
+async function loadRecommendations() {
+  try {
+    const response = await fetch("/api/Recipes");
+    if (!response.ok) throw new Error("status " + response.status);
+    recommendedRecipes = await response.json();
+    renderRecommendations();
+  } catch (error) {
+    recommendations.innerHTML = `<p class="recommendation-error">Не удалось загрузить рекомендации.</p>`;
+    console.error(error);
+  }
+}
+
+function renderRecommendations() {
+  const badges = ["Лучший выбор", "Популярное", "Новое", "Полезно"];
+  recommendations.innerHTML = recommendedRecipes
+    .slice(0, 4)
+    .map((recipe, index) => {
+      const meta = recipeMeta(recipe);
+      const isFav = !!recipe.isFavorite;
+      const image = recipe.imageUrl
+        ? `<img src="${escapeHtml(recipe.imageUrl)}" alt="${escapeHtml(recipe.name)}" loading="lazy" />`
+        : `<div class="card-media--empty" style="height:100%"></div>`;
+
+      return `
+        <article class="recommendation-card" data-recommendation="${recipe.id}">
+          <div class="recommendation-image">
+            ${image}
+            <span class="recommendation-badge badge-${index}">${badges[index]}</span>
+            <button type="button" class="fav-btn ${isFav ? "is-on" : ""}" data-rec-fav="${recipe.id}" aria-label="В избранное">
+              <svg viewBox="0 0 24 24" fill="${isFav ? "currentColor" : "none"}" aria-hidden="true">
+                <path d="M12 20s-7-4.4-7-9.2A3.8 3.8 0 0 1 12 8a3.8 3.8 0 0 1 7 2.8C19 15.6 12 20 12 20Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
+              </svg>
+            </button>
+          </div>
+          <div class="recommendation-body">
+            <h3>${escapeHtml(recipe.name)}</h3>
+            <p class="card-meta"><span>⏱ ${meta.time}</span><span>✦ ${difficultyLabel(recipe.difficulty)}</span><span>🍽 ${meta.servings}</span></p>
+            <p>${escapeHtml(meta.blurb)}</p>
+          </div>
+        </article>`;
+    })
+    .join("");
+
+  recommendations.querySelectorAll("[data-recommendation]").forEach((card) => {
+    card.addEventListener("click", (event) => {
+      if (event.target.closest("[data-rec-fav]")) return;
+      const recipe = recommendedRecipes.find((item) => item.id === Number(card.dataset.recommendation));
+      if (!recipe) return;
+      ingredients = [...(recipe.products || [])];
+      renderTags();
+      form.requestSubmit();
+    });
+  });
+
+  recommendations.querySelectorAll("[data-rec-fav]").forEach((button) => {
+    button.addEventListener("click", async (event) => {
+      event.stopPropagation();
+      const id = Number(button.dataset.recFav);
+      const data = await setFavorite(id);
+      const recipe = recommendedRecipes.find((item) => item.id === id);
+      if (recipe && data) recipe.isFavorite = data.isFavorite;
+      renderRecommendations();
+    });
   });
 }
 
@@ -288,19 +464,28 @@ function renderDetail(recipe) {
             .join("")}
         </ol>
       </div>
+    </div>
+    <div class="nutrition">
+      <div class="nutrition-head"><strong>Пищевая ценность</strong><span>на порцию</span></div>
+      <div class="nutrition-grid">
+        <span><small>Калории</small><strong>${meta.calories} ккал</strong></span>
+        <span><small>Белки</small><strong>${meta.protein} г</strong></span>
+        <span><small>Жиры</small><strong>${meta.fat} г</strong></span>
+        <span><small>Углеводы</small><strong>${meta.carbs} г</strong></span>
+      </div>
     </div>`;
 }
 
 function recipeMeta(recipe) {
   switch ((recipe.difficulty || "").toLowerCase()) {
     case "easy":
-      return { time: "15 мин", servings: "1–2 порции", blurb: "Простое блюдо на скорую руку — минимум шагов и продуктов." };
+      return { time: "15 мин", minutes: 15, type: recipe.name?.toLowerCase().includes("яич") || recipe.name?.toLowerCase().includes("омлет") ? "breakfast" : "snack", servings: "1–2 порции", calories: 280, protein: 18, fat: 16, carbs: 12, blurb: "Простое блюдо на скорую руку — минимум шагов и продуктов." };
     case "medium":
-      return { time: "25 мин", servings: "2 порции", blurb: "Немного внимания на плите — и получится сытный результат." };
+      return { time: "25 мин", minutes: 25, type: "snack", servings: "2 порции", calories: 360, protein: 17, fat: 19, carbs: 30, blurb: "Немного внимания на плите — и получится сытный результат." };
     case "hard":
-      return { time: "40 мин", servings: "3–4 порции", blurb: "Потребует чуть больше времени, но результат того стоит." };
+      return { time: "40 мин", minutes: 40, type: recipe.name?.toLowerCase().includes("блин") ? "breakfast" : "main", servings: "3–4 порции", calories: 450, protein: 12, fat: 14, carbs: 62, blurb: "Потребует чуть больше времени, но результат того стоит." };
     default:
-      return { time: "20 мин", servings: "2 порции", blurb: "Подходящий рецепт под твои продукты." };
+      return { time: "20 мин", minutes: 20, type: "main", servings: "2 порции", calories: 320, protein: 16, fat: 12, carbs: 38, blurb: "Подходящий рецепт под твои продукты." };
   }
 }
 
@@ -318,18 +503,25 @@ function difficultyLabel(value) {
 }
 
 async function toggleFavorite(id) {
+  const data = await setFavorite(Number(id));
+  if (data) {
+    const recipe = lastRecipes.find((item) => item.id === Number(id));
+    const recommended = recommendedRecipes.find((item) => item.id === Number(id));
+    if (recipe) recipe.isFavorite = data.isFavorite;
+    if (recommended) recommended.isFavorite = data.isFavorite;
+    renderRecommendations();
+  }
+}
+
+async function setFavorite(id) {
   try {
     const response = await fetch(`/api/Recipes/${id}/favorite`, { method: "POST" });
     if (!response.ok) throw new Error("status " + response.status);
-
-    const data = await response.json();
-    const recipe = lastRecipes.find((item) => item.id === Number(id));
-    if (recipe) {
-      recipe.isFavorite = data.isFavorite;
-    }
+    return await response.json();
   } catch (error) {
     console.error(error);
     status.textContent = "Не удалось обновить избранное.";
+    return null;
   }
 }
 
@@ -339,7 +531,10 @@ async function loadProductSuggestions() {
     if (!response.ok) return;
     const products = await response.json();
     suggestions.innerHTML = (products || [])
-      .map((name) => `<option value="${escapeHtml(name)}"></option>`)
+      .map((product) => {
+        const name = typeof product === "string" ? product : product.name;
+        return `<option value="${escapeHtml(name)}"></option>`;
+      })
       .join("");
   } catch {
     // suggestions are optional
