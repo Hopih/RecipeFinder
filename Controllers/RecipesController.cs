@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using RecipeFinder.Data;
+using RecipeFinder.Models;
 
 namespace RecipeFinder.Controllers;
 
@@ -10,60 +11,90 @@ public class RecipesController : ControllerBase
 {
     private readonly AppDbContext _db;
 
-    // ASP.NET сам передаст AppDbContext (тот, что мы зарегистрировали в Program.cs)
     public RecipesController(AppDbContext db)
     {
         _db = db;
     }
 
-    // GET /api/recipes — все рецепты
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
         var recipes = await _db.Recipes
-            .Include(r => r.Products)
-            .Select(r => new
+            .Include(recipe => recipe.Products)
+            .Select(recipe => new
             {
-                r.Id,
-                r.Name,
-                r.Instructions,
-                Products = r.Products.Select(p => p.Name).ToList()
+                recipe.Id,
+                recipe.Name,
+                recipe.Instructions,
+                recipe.ImageUrl,
+                recipe.Difficulty,
+                Products = recipe.Products.Select(product => product.Name).ToList()
             })
             .ToListAsync();
 
         return Ok(recipes);
     }
 
-    // POST /api/recipes/search
-    // Тело запроса: [ "яйца", "молоко", "мука" ]
-    [HttpPost("search")]
-    public async Task<IActionResult> SearchByProducts([FromBody] List<string> availableProducts)
+    [HttpGet("products")]
+    public async Task<IActionResult> GetProducts()
     {
-        if (availableProducts is null || availableProducts.Count == 0)
-        {
-            return BadRequest("Передай список продуктов, например: [\"яйца\", \"молоко\"]");
-        }
-
-        // Сравниваем без учёта регистра и лишних пробелов
-        var normalized = availableProducts
-            .Select(p => p.Trim().ToLower())
-            .Where(p => p.Length > 0)
-            .ToHashSet();
-
-        var recipes = await _db.Recipes
-            .Include(r => r.Products)
+        var products = await _db.Products
+            .OrderBy(product => product.Name)
+            .Select(product => product.Name)
             .ToListAsync();
 
-        // Рецепт подходит, если ВСЕ его продукты есть у пользователя
+        return Ok(products);
+    }
+
+    [HttpPost("search")]
+    public async Task<IActionResult> SearchByProducts([FromBody] RecipeSearchRequest request)
+    {
+        if (request.Products is null || request.Products.Count == 0)
+        {
+            return BadRequest("Передай список продуктов, например: { \"products\": [\"яйца\", \"молоко\"], \"difficulty\": \"easy\" }");
+        }
+
+        var normalized = request.Products
+            .Select(product => product.Trim().ToLower())
+            .Where(product => product.Length > 0)
+            .ToHashSet();
+
+        var difficulty = (request.Difficulty ?? "all").Trim().ToLower();
+
+        var recipes = await _db.Recipes
+            .Include(recipe => recipe.Products)
+            .ToListAsync();
+
+        // Частичное совпадение: хотя бы 1 общий продукт + фильтр сложности
         var matched = recipes
-            .Where(r => r.Products.All(p => normalized.Contains(p.Name.ToLower())))
-            .Select(r => new
+            .Where(recipe =>
+                (string.Equals(recipe.Difficulty, difficulty, StringComparison.OrdinalIgnoreCase) || difficulty == "all") &&
+                recipe.Products.Any(product => normalized.Contains(product.Name.ToLower())))
+            .Select(recipe =>
             {
-                r.Id,
-                r.Name,
-                r.Instructions,
-                Products = r.Products.Select(p => p.Name).ToList()
+                var products = recipe.Products.Select(product => product.Name).ToList();
+                var have = products.Where(name => normalized.Contains(name.ToLower())).ToList();
+                var missing = products.Where(name => !normalized.Contains(name.ToLower())).ToList();
+                var hasAll = missing.Count == 0;
+
+                return new
+                {
+                    recipe.Id,
+                    recipe.Name,
+                    recipe.Instructions,
+                    recipe.ImageUrl,
+                    recipe.Difficulty,
+                    Products = products,
+                    HaveProducts = have,
+                    MissingProducts = missing,
+                    MatchCount = have.Count,
+                    TotalCount = products.Count,
+                    HasAllIngredients = hasAll
+                };
             })
+            .OrderByDescending(recipe => recipe.HasAllIngredients)
+            .ThenByDescending(recipe => recipe.MatchCount)
+            .ThenBy(recipe => recipe.TotalCount - recipe.MatchCount)
             .ToList();
 
         return Ok(matched);

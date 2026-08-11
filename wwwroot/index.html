@@ -6,32 +6,105 @@
   <title>RecipeFinder — что приготовить</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Manrope:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Syne:wght@600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/css/site.css" />
 </head>
 <body>
-  <div class="page">
-    <header class="hero">
-      <p class="brand">RecipeFinder</p>
-      <h1>Что можно приготовить из того, что есть</h1>
-      <p class="lead">Введи продукты через запятую — найдём подходящие рецепты в базе.</p>
+  <div class="app">
+    <header class="topbar">
+      <a class="logo" href="/">
+        <span class="logo-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none">
+            <path d="M8 10c0-2.2 1.8-4 4-4s4 1.8 4 4v1H8v-1Z" fill="currentColor" opacity=".35"/>
+            <path d="M6 11h12v2.2c0 3.3-2.7 6-6 6s-6-2.7-6-6V11Z" fill="currentColor"/>
+            <path d="M9 7.5V5.8M12 7V4.5M15 7.5V5.8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+          </svg>
+        </span>
+        <span class="logo-text">RecipeFinder</span>
+      </a>
 
-      <form id="search-form" class="search">
-        <label for="products-input" class="sr-only">Список продуктов</label>
-        <input
-          id="products-input"
-          type="text"
-          placeholder="например: яйца, молоко, соль"
-          autocomplete="off"
-        />
-        <button type="submit">Найти рецепты</button>
-      </form>
+      <nav class="nav" aria-label="Главное меню">
+        <a class="nav-link is-active" href="/">Главная</a>
+        <a class="nav-link" href="#ingredients">Продукты</a>
+        <a class="nav-link" href="#favorites">Избранное</a>
+        <a class="nav-link" href="#about">О проекте</a>
+      </nav>
+
+      <div class="topbar-actions">
+        <button type="button" class="icon-btn" id="theme-btn" aria-label="Тема" title="Тема">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M12 3a9 9 0 1 0 9 9c0-.4-.3-.8-.7-.9a5.5 5.5 0 0 1-7.4-7.4c-.1-.4-.5-.7-.9-.7Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <div class="avatar" aria-hidden="true">A</div>
+      </div>
     </header>
 
-    <main>
-      <p id="status" class="status" aria-live="polite"></p>
-      <section id="results" class="results" aria-label="Найденные рецепты"></section>
-    </main>
+    <section class="hero" id="ingredients">
+      <h1>Что приготовить из того, что есть?</h1>
+
+      <form id="search-form" class="finder">
+        <label class="field-label" for="products-input">Добавь продукты</label>
+        <div class="field-row">
+          <input
+            id="products-input"
+            type="text"
+            placeholder="Добавить продукт…"
+            autocomplete="off"
+            list="product-suggestions"
+          />
+          <datalist id="product-suggestions"></datalist>
+          <button type="button" class="btn-add" id="add-product-btn">Добавить</button>
+        </div>
+
+        <div id="ingredient-tags" class="tags" aria-live="polite"></div>
+
+        <div class="finder-footer">
+          <div class="difficulty" role="group" aria-label="Сложность">
+            <button type="button" class="difficulty-btn is-active" data-difficulty="all">Все</button>
+            <button type="button" class="difficulty-btn" data-difficulty="easy">Легко</button>
+            <button type="button" class="difficulty-btn" data-difficulty="medium">Средне</button>
+            <button type="button" class="difficulty-btn" data-difficulty="hard">Сложно</button>
+          </div>
+          <button type="submit" class="btn-primary">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M12 3l1.4 4.2L18 9l-4.6 1.8L12 15l-1.4-4.2L6 9l4.6-1.8L12 3Z" fill="currentColor"/>
+              <path d="M18.5 14.5l.7 2.1 2.1.7-2.1.7-.7 2.1-.7-2.1-2.1-.7 2.1-.7.7-2.1Z" fill="currentColor"/>
+            </svg>
+            Найти рецепты
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <p id="status" class="status" aria-live="polite"></p>
+
+    <section class="workspace" id="workspace" hidden>
+      <div class="results-pane">
+        <div class="pane-head">
+          <h2>Что можно приготовить?</h2>
+          <label class="sort">
+            Сортировка:
+            <select id="sort-select">
+              <option value="relevance">Релевантность</option>
+              <option value="easy">Сначала лёгкие</option>
+              <option value="hard">Сначала сложные</option>
+            </select>
+          </label>
+        </div>
+        <div id="results" class="results" aria-label="Найденные рецепты"></div>
+        <button type="button" class="btn-load-more" id="load-more" hidden>
+          Ещё рецепты
+          <span aria-hidden="true">▾</span>
+        </button>
+      </div>
+
+      <aside id="detail" class="detail-pane" aria-label="Детали рецепта" hidden></aside>
+    </section>
+
+    <section class="about" id="about">
+      <p>RecipeFinder подбирает блюда по продуктам из холодильника и показывает, чего не хватает.</p>
+    </section>
   </div>
 
   <script src="/js/app.js"></script>
