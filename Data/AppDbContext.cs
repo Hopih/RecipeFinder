@@ -10,7 +10,16 @@ public class AppDbContext : DbContext
     {
     }
 
-    // Таблицы в базе данных
     public DbSet<Product> Products => Set<Product>();
     public DbSet<Recipe> Recipes => Set<Recipe>();
+    public DbSet<User> Users => Set<User>();
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        // У одного пользователя — много избранных рецептов.
+        // EF создаст join-таблицу UserFavorites (UserId + RecipeId).
+        modelBuilder.Entity<User>()
+            .HasMany(user => user.Favorites)
+            .WithMany();
+    }
 }

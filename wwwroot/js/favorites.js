@@ -3,6 +3,9 @@ const workspace = document.getElementById("workspace");
 const results = document.getElementById("results");
 const detail = document.getElementById("detail");
 const empty = document.getElementById("empty");
+const emptyMessage = document.getElementById("empty-message");
+const emptyBrowse = document.getElementById("empty-browse");
+const emptyAuth = document.getElementById("empty-auth");
 const favCount = document.getElementById("fav-count");
 
 let recipes = [];
@@ -15,10 +18,17 @@ document.getElementById("theme-btn")?.addEventListener("click", () => {
 loadFavoritesPage();
 
 async function loadFavoritesPage() {
+  const userId = getAuthUserId();
+
+  if (!userId) {
+    showAuthPrompt();
+    return;
+  }
+
   status.textContent = "Загружаем избранное…";
 
   try {
-    const response = await fetch("/api/Recipes/favorites");
+    const response = await fetch(`/api/Recipes/favorites?userId=${userId}`);
     if (!response.ok) throw new Error("status " + response.status);
 
     recipes = await response.json();
@@ -38,11 +48,24 @@ async function loadFavoritesPage() {
   }
 }
 
+function showAuthPrompt() {
+  status.textContent = "";
+  workspace.hidden = true;
+  detail.hidden = true;
+  empty.hidden = false;
+  emptyMessage.textContent = "Войди, чтобы видеть своё избранное.";
+  emptyBrowse.hidden = true;
+  emptyAuth.hidden = false;
+}
+
 function showEmpty() {
   status.textContent = "";
   workspace.hidden = true;
   detail.hidden = true;
   empty.hidden = false;
+  emptyMessage.textContent = "Пока ничего нет.";
+  emptyBrowse.hidden = false;
+  emptyAuth.hidden = true;
 }
 
 function renderPage() {
@@ -101,8 +124,18 @@ function renderPage() {
 }
 
 async function removeFavorite(id) {
+  const userId = getAuthUserId();
+  if (!userId) {
+    window.location.href = "/authorization.html";
+    return;
+  }
+
   try {
-    const response = await fetch(`/api/Recipes/${id}/favorite`, { method: "POST" });
+    const response = await fetch(`/api/Recipes/${id}/favorite`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId }),
+    });
     if (!response.ok) throw new Error("status " + response.status);
 
     recipes = recipes.filter((recipe) => String(recipe.id) !== String(id));

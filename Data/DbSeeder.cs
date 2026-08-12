@@ -1,154 +1,142 @@
+using Microsoft.EntityFrameworkCore;
 using RecipeFinder.Models;
 
 namespace RecipeFinder.Data;
 
 public static class DbSeeder
 {
+    // Старые названия рецептов в базе -> исправленные названия из каталога.
+    private static readonly Dictionary<string, string> LegacyNames = new()
+    {
+        ["фrittata с овощами"] = "Фриттата с овощами",
+        ["фrittata с сыром"] = "Фриттата с сыром",
+        ["frittata с овощами"] = "Фриттата с овощами",
+        ["frittata с сыром"] = "Фриттата с сыром",
+        ["гуacamole тост"] = "Гуакамоле тост",
+        ["guacamole тост"] = "Гуакамоле тост"
+    };
+
     public static void Seed(AppDbContext db)
     {
-        if (!db.Recipes.Any())
-        {
-            SeedInitialData(db);
-            return;
-        }
-
-        BackfillRecipes(db);
+        FixLegacyNames(db);
+        EnsureCatalog(db);
+        BackfillFromCatalog(db);
     }
 
-    private static void SeedInitialData(AppDbContext db)
+    private static void FixLegacyNames(AppDbContext db)
     {
-        var eggs = new Product { Name = "яйца" };
-        var milk = new Product { Name = "молоко" };
-        var salt = new Product { Name = "соль" };
-        var flour = new Product { Name = "мука" };
-        var sugar = new Product { Name = "сахар" };
-        var butter = new Product { Name = "масло" };
-        var bread = new Product { Name = "хлеб" };
-        var cheese = new Product { Name = "сыр" };
+        var recipes = db.Recipes.ToList();
+        var existingNames = recipes.Select(recipe => recipe.Name.ToLower()).ToHashSet();
+        var changed = false;
 
-        db.Products.AddRange(eggs, milk, salt, flour, sugar, butter, bread, cheese);
-
-        db.Recipes.AddRange(
-            new Recipe
+        foreach (var recipe in recipes)
+        {
+            if (!LegacyNames.TryGetValue(recipe.Name.ToLower(), out var newName))
             {
-                Name = "Омлет",
-                Difficulty = "easy",
-                ImageUrl = "https://images.unsplash.com/photo-1525351484163-7529414344d8?auto=format&fit=crop&w=1200&q=80",
-                Instructions =
-                    "1. Разбей 2–3 яйца в миску, добавь щепотку соли и 50 мл молока.\n" +
-                    "2. Взбей венчиком до однородности.\n" +
-                    "3. Разогрей сковороду на среднем огне, слегка смажь маслом.\n" +
-                    "4. Вылей смесь, жарь 3–4 минуты под крышкой до готовности.\n" +
-                    "5. Сложи пополам и подавай сразу.",
-                Products = [eggs, milk, salt]
-            },
-            new Recipe
-            {
-                Name = "Блинчики",
-                Difficulty = "hard",
-                ImageUrl = "https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?auto=format&fit=crop&w=1200&q=80",
-                Instructions =
-                    "1. Смешай 200 г муки, 2 яйца, 300 мл молока и 1 ст. л. сахара.\n" +
-                    "2. Взбей тесто без комков, дай постоять 10 минут.\n" +
-                    "3. Разогрей сковороду, смажь тонким слоем масла.\n" +
-                    "4. Наливай тесто тонким слоем, жарь по 1–2 минуты с каждой стороны.\n" +
-                    "5. Стопку блинов можно подавать с вареньем или сметаной.",
-                Products = [flour, milk, eggs, sugar]
-            },
-            new Recipe
-            {
-                Name = "Гренки с сыром",
-                Difficulty = "medium",
-                ImageUrl = "https://images.unsplash.com/photo-1509722747041-616f39b57569?auto=format&fit=crop&w=1200&q=80",
-                Instructions =
-                    "1. Нарежь хлеб ломтями толщиной около 1.5 см.\n" +
-                    "2. Разогрей сковороду с кусочком масла.\n" +
-                    "3. Обжарь хлеб с двух сторон до золотистой корочки.\n" +
-                    "4. Сразу положи сверху ломтик сыра, чтобы он начал таять.\n" +
-                    "5. Накрой крышкой на 30–60 секунд и подавай горячими.",
-                Products = [bread, butter, cheese]
-            },
-            new Recipe
-            {
-                Name = "Яичница",
-                Difficulty = "easy",
-                ImageUrl = "https://images.unsplash.com/photo-1482049016688-2d3e1b311543?auto=format&fit=crop&w=1200&q=80",
-                Instructions =
-                    "1. Разогрей сковороду на среднем огне.\n" +
-                    "2. Аккуратно разбей 1–2 яйца, стараясь не повредить желток.\n" +
-                    "3. Посоли по вкусу.\n" +
-                    "4. Жарь 2–4 минуты: для жидкого желтка — меньше, для плотного — дольше.\n" +
-                    "5. Подавай сразу, можно с хлебом.",
-                Products = [eggs, salt]
+                continue;
             }
-        );
+
+            // Не переименовываем, если рецепт с новым именем уже есть в базе.
+            if (existingNames.Contains(newName.ToLower()))
+            {
+                continue;
+            }
+
+            recipe.Name = newName;
+            existingNames.Add(newName.ToLower());
+            changed = true;
+        }
+
+        if (changed)
+        {
+            db.SaveChanges();
+        }
+    }
+
+    private static void EnsureCatalog(AppDbContext db)
+    {
+        var existingProducts = db.Products
+            .AsNoTracking()
+            .Select(product => product.Name.ToLower())
+            .ToHashSet();
+
+        foreach (var productName in RecipeCatalog.Products)
+        {
+            if (existingProducts.Contains(productName.ToLower()))
+            {
+                continue;
+            }
+
+            db.Products.Add(new Product { Name = productName });
+            existingProducts.Add(productName.ToLower());
+        }
+
+        db.SaveChanges();
+
+        var productsByName = db.Products
+            .ToDictionary(product => product.Name.ToLower(), product => product);
+
+        var existingRecipes = db.Recipes
+            .AsNoTracking()
+            .Select(recipe => recipe.Name.ToLower())
+            .ToHashSet();
+
+        foreach (var seed in RecipeCatalog.Recipes)
+        {
+            if (existingRecipes.Contains(seed.Name.ToLower()))
+            {
+                continue;
+            }
+
+            var recipeProducts = seed.ProductNames
+                .Select(name => productsByName[name.ToLower()])
+                .ToList();
+
+            db.Recipes.Add(new Recipe
+            {
+                Name = seed.Name,
+                Difficulty = seed.Difficulty,
+                ImageUrl = seed.ImageUrl,
+                Instructions = seed.Instructions,
+                Products = recipeProducts
+            });
+
+            existingRecipes.Add(seed.Name.ToLower());
+        }
 
         db.SaveChanges();
     }
 
-    private static void BackfillRecipes(AppDbContext db)
+    private static void BackfillFromCatalog(AppDbContext db)
     {
+        var catalogByName = RecipeCatalog.Recipes
+            .ToDictionary(recipe => recipe.Name.ToLower(), recipe => recipe);
+
         var recipes = db.Recipes.ToList();
         var changed = false;
 
         foreach (var recipe in recipes)
         {
-            var (imageUrl, instructions, difficulty) = recipe.Name switch
+            if (!catalogByName.TryGetValue(recipe.Name.ToLower(), out var seed))
             {
-                "Омлет" => (
-                    "https://images.unsplash.com/photo-1525351484163-7529414344d8?auto=format&fit=crop&w=1200&q=80",
-                    "1. Разбей 2–3 яйца в миску, добавь щепотку соли и 50 мл молока.\n" +
-                    "2. Взбей венчиком до однородности.\n" +
-                    "3. Разогрей сковороду на среднем огне, слегка смажь маслом.\n" +
-                    "4. Вылей смесь, жарь 3–4 минуты под крышкой до готовности.\n" +
-                    "5. Сложи пополам и подавай сразу.",
-                    "easy"
-                ),
-                "Блинчики" => (
-                    "https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?auto=format&fit=crop&w=1200&q=80",
-                    "1. Смешай 200 г муки, 2 яйца, 300 мл молока и 1 ст. л. сахара.\n" +
-                    "2. Взбей тесто без комков, дай постоять 10 минут.\n" +
-                    "3. Разогрей сковороду, смажь тонким слоем масла.\n" +
-                    "4. Наливай тесто тонким слоем, жарь по 1–2 минуты с каждой стороны.\n" +
-                    "5. Стопку блинов можно подавать с вареньем или сметаной.",
-                    "hard"
-                ),
-                "Гренки с сыром" => (
-                    "https://images.unsplash.com/photo-1509722747041-616f39b57569?auto=format&fit=crop&w=1200&q=80",
-                    "1. Нарежь хлеб ломтями толщиной около 1.5 см.\n" +
-                    "2. Разогрей сковороду с кусочком масла.\n" +
-                    "3. Обжарь хлеб с двух сторон до золотистой корочки.\n" +
-                    "4. Сразу положи сверху ломтик сыра, чтобы он начал таять.\n" +
-                    "5. Накрой крышкой на 30–60 секунд и подавай горячими.",
-                    "medium"
-                ),
-                "Яичница" => (
-                    "https://images.unsplash.com/photo-1482049016688-2d3e1b311543?auto=format&fit=crop&w=1200&q=80",
-                    "1. Разогрей сковороду на среднем огне.\n" +
-                    "2. Аккуратно разбей 1–2 яйца, стараясь не повредить желток.\n" +
-                    "3. Посоли по вкусу.\n" +
-                    "4. Жарь 2–4 минуты: для жидкого желтка — меньше, для плотного — дольше.\n" +
-                    "5. Подавай сразу, можно с хлебом.",
-                    "easy"
-                ),
-                _ => (recipe.ImageUrl, recipe.Instructions, recipe.Difficulty)
-            };
+                continue;
+            }
 
-            if (string.IsNullOrWhiteSpace(recipe.ImageUrl) || recipe.ImageUrl != imageUrl)
+            if (string.IsNullOrWhiteSpace(recipe.ImageUrl) || recipe.ImageUrl != seed.ImageUrl)
             {
-                recipe.ImageUrl = imageUrl;
+                recipe.ImageUrl = seed.ImageUrl;
                 changed = true;
             }
 
-            if (recipe.Instructions != instructions)
+            if (recipe.Instructions != seed.Instructions)
             {
-                recipe.Instructions = instructions;
+                recipe.Instructions = seed.Instructions;
                 changed = true;
             }
 
-            if (string.IsNullOrWhiteSpace(recipe.Difficulty) || recipe.Difficulty != difficulty)
+            if (string.IsNullOrWhiteSpace(recipe.Difficulty) || recipe.Difficulty != seed.Difficulty)
             {
-                recipe.Difficulty = difficulty;
+                recipe.Difficulty = seed.Difficulty;
                 changed = true;
             }
         }

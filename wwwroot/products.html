@@ -36,7 +36,13 @@
             <path d="M12 3a9 9 0 1 0 9 9c0-.4-.3-.8-.7-.9a5.5 5.5 0 0 1-7.4-7.4c-.1-.4-.5-.7-.9-.7Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
           </svg>
         </button>
-        <div class="avatar" aria-hidden="true">A</div>
+        <div class="user-menu" id="user-menu">
+          <a class="avatar" id="user-avatar" href="/authorization.html" aria-label="Вход и регистрация" title="Вход">A</a>
+          <div class="user-menu-panel" id="user-menu-panel" hidden>
+            <p class="user-menu-name" id="user-menu-name"></p>
+            <button type="button" class="user-menu-logout" id="user-menu-logout">Выйти</button>
+          </div>
+        </div>
       </div>
     </header>
 
@@ -62,6 +68,7 @@
     </section>
   </div>
 
+  <script src="/js/auth.js"></script>
   <script src="/js/products.js"></script>
 </body>
 </html>

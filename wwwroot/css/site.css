@@ -37,7 +37,7 @@ body {
     var(--bg);
 }
 
-button,
+button:not(.auth-link),
 input,
 select {
   font: inherit;
@@ -147,6 +147,63 @@ select {
   font-weight: 700;
   color: #0b1a10;
   background: linear-gradient(135deg, #86efac, #4ade80);
+  text-decoration: none;
+  transition: transform 0.15s ease, filter 0.15s ease;
+}
+
+.avatar:hover {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+}
+
+.avatar.is-active {
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
+.user-menu {
+  position: relative;
+}
+
+.user-menu-panel {
+  position: absolute;
+  top: calc(100% + 0.55rem);
+  right: 0;
+  z-index: 20;
+  min-width: 11rem;
+  padding: 0.85rem;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  animation: fade-up 0.2s ease both;
+}
+
+.user-menu-name {
+  margin: 0 0 0.75rem;
+  color: var(--text);
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.user-menu-logout {
+  width: 100%;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  padding: 0.55rem 0.85rem;
+  background: var(--surface-2);
+  color: var(--text);
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.user-menu-logout:hover {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.avatar.is-logged-in {
+  cursor: pointer;
 }
 
 /* —— Hero / finder —— */
@@ -337,6 +394,10 @@ select {
   text-align: center;
   color: var(--accent);
   font-weight: 600;
+}
+
+.status.is-error {
+  color: var(--danger);
 }
 
 /* —— Workspace —— */
@@ -1212,8 +1273,101 @@ select {
   font-size: 1.05rem;
 }
 
-.empty-fav .btn-primary {
+.btn-fav-browse,
+.btn-fav-auth {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 11rem;
+  border-radius: 999px;
+  padding: 0.85rem 1.35rem;
+  font-weight: 700;
   text-decoration: none;
+  cursor: pointer;
+  transition: transform 0.15s ease, filter 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.btn-fav-browse {
+  border: 0;
+  background: var(--accent);
+  color: #0b1a10;
+}
+
+.btn-fav-browse:hover {
+  filter: brightness(1.05);
+  transform: translateY(-1px);
+}
+
+.btn-fav-auth {
+  border: 1px solid var(--accent-border);
+  background: var(--accent-dim);
+  color: var(--accent);
+}
+
+.btn-fav-auth:hover {
+  border-color: var(--accent);
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+}
+
+.auth-hero {
+  margin-bottom: 1.75rem;
+}
+
+.auth-layout {
+  max-width: 420px;
+  margin: 0 auto;
+  animation: fade-up 0.55s ease 0.06s both;
+}
+
+.auth-card {
+  margin: 0;
+}
+
+.auth-card-title {
+  margin: 0 0 1.25rem;
+  font-family: var(--display);
+  font-size: 1.35rem;
+  letter-spacing: -0.02em;
+}
+
+.auth-field {
+  margin-bottom: 1rem;
+}
+
+.auth-submit {
+  width: 100%;
+  margin-top: 0.35rem;
+}
+
+.auth-switch {
+  margin: 1rem 0 0;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.auth-switch button.auth-link {
+  border: 0;
+  padding: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  appearance: none;
+}
+
+.auth-switch button.auth-link:hover {
+  color: #86efac;
+}
+
+.auth-status {
+  max-width: 420px;
+  margin: 1rem auto 0;
+  text-align: center;
 }
 
 .products-toolbar {

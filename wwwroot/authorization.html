@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Вход — RecipeFinder</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Syne:wght@600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/site.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <a class="logo" href="/">
+        <span class="logo-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none">
+            <path d="M8 10c0-2.2 1.8-4 4-4s4 1.8 4 4v1H8v-1Z" fill="currentColor" opacity=".35"/>
+            <path d="M6 11h12v2.2c0 3.3-2.7 6-6 6s-6-2.7-6-6V11Z" fill="currentColor"/>
+            <path d="M9 7.5V5.8M12 7V4.5M15 7.5V5.8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+          </svg>
+        </span>
+        <span class="logo-text">RecipeFinder</span>
+      </a>
+
+      <nav class="nav" aria-label="Главное меню">
+        <a class="nav-link" href="/">Главная</a>
+        <a class="nav-link" href="/products.html">Продукты</a>
+        <a class="nav-link" href="/favorites.html">Избранное</a>
+        <a class="nav-link" href="/#about">О проекте</a>
+      </nav>
+
+      <div class="topbar-actions">
+        <button type="button" class="icon-btn" id="theme-btn" aria-label="Тема" title="Тема">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M12 3a9 9 0 1 0 9 9c0-.4-.3-.8-.7-.9a5.5 5.5 0 0 1-7.4-7.4c-.1-.4-.5-.7-.9-.7Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <div class="user-menu" id="user-menu">
+          <a class="avatar is-active" id="user-avatar" href="/authorization.html" aria-label="Вход и регистрация" title="Вход">A</a>
+          <div class="user-menu-panel" id="user-menu-panel" hidden>
+            <p class="user-menu-name" id="user-menu-name"></p>
+            <button type="button" class="user-menu-logout" id="user-menu-logout">Выйти</button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <section class="page-hero auth-hero">
+      <h1>Вход в аккаунт</h1>
+      <p class="page-lead">Сохраняй избранное и историю поиска на всех устройствах.</p>
+    </section>
+
+    <section class="auth-layout">
+      <form class="auth-card finder" id="login-form" aria-labelledby="login-heading">
+        <h2 id="login-heading" class="auth-card-title">Войти</h2>
+
+        <label class="field-label" for="login-email">Email</label>
+        <div class="field-row auth-field">
+          <input id="login-email" type="email" name="email" autocomplete="email" placeholder="you@example.com" required />
+        </div>
+
+        <label class="field-label" for="login-password">Пароль</label>
+        <div class="field-row auth-field">
+          <input id="login-password" type="password" name="password" autocomplete="current-password" placeholder="••••••••" required />
+        </div>
+
+        <button type="submit" class="btn-primary auth-submit">Войти</button>
+        <p class="auth-switch">Нет аккаунта? <button type="button" class="auth-link" id="show-register">Зарегистрироваться</button></p>
+      </form>
+
+      <form class="auth-card finder" id="register-form" hidden aria-labelledby="register-heading">
+        <h2 id="register-heading" class="auth-card-title">Регистрация</h2>
+
+        <label class="field-label" for="register-name">Имя</label>
+        <div class="field-row auth-field">
+          <input id="register-name" type="text" name="name" autocomplete="name" placeholder="Амир" required />
+        </div>
+
+        <label class="field-label" for="register-email">Email</label>
+        <div class="field-row auth-field">
+          <input id="register-email" type="email" name="email" autocomplete="email" placeholder="you@example.com" required />
+        </div>
+
+        <label class="field-label" for="register-password">Пароль</label>
+        <div class="field-row auth-field">
+          <input id="register-password" type="password" name="password" autocomplete="new-password" placeholder="••••••••" minlength="6" required />
+        </div>
+
+        <button type="submit" class="btn-primary auth-submit">Создать аккаунт</button>
+        <p class="auth-switch">Уже есть аккаунт? <button type="button" class="auth-link" id="show-login">Войти</button></p>
+      </form>
+    </section>
+
+    <p id="auth-status" class="status auth-status" aria-live="polite" hidden></p>
+  </div>
+
+  <script src="/js/auth.js"></script>
+  <script src="/js/authorization.js"></script>
+</body>
+</html>

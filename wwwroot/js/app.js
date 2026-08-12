@@ -87,6 +87,7 @@ async function searchRecipes() {
       body: JSON.stringify({
         products: ingredients,
         difficulty: selectedDifficulty,
+        userId: getAuthUserId(),
       }),
     });
 
@@ -158,15 +159,13 @@ function addIngredientFromInput() {
   if (!value) return;
 
   const parts = value
-    .split(",")
-    .map((item) => item.trim())
+    .replaceAll(","," ")
+    .split(/\s+/)
     .filter(Boolean);
 
   for (const part of parts) {
     addIngredient(part);
-  }
-
-  input.value = "";
+  } 
 }
 
 function removeIngredient(name) {
@@ -267,7 +266,9 @@ function applySort() {
 
 async function loadRecommendations() {
   try {
-    const response = await fetch("/api/Recipes");
+    const userId = getAuthUserId();
+    const url = userId ? `/api/Recipes?userId=${userId}` : "/api/Recipes";
+    const response = await fetch(url);
     if (!response.ok) throw new Error("status " + response.status);
     recommendedRecipes = await response.json();
     renderRecommendations();
@@ -514,13 +515,51 @@ async function toggleFavorite(id) {
 }
 
 async function setFavorite(id) {
+  const userId = getAuthUserId();
+  if (!userId) {
+    status.textContent = "Войди, чтобы сохранять избранное.";
+    window.location.href = "/authorization.html";
+    return null;
+  }
+
   try {
-    const response = await fetch(`/api/Recipes/${id}/favorite`, { method: "POST" });
-    if (!response.ok) throw new Error("status " + response.status);
-    return await response.json();
+    const response = await fetch(`/api/Recipes/${id}/favorite`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId }),
+    });
+
+    const text = await response.text();
+    let data = null;
+
+    if (text) {
+      try {
+        data = JSON.parse(text);
+      } catch {
+        data = { message: text };
+      }
+    }
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        clearCurrentUser();
+        status.textContent = "Сессия устарела. Войди заново.";
+        window.location.href = "/authorization.html";
+        return null;
+      }
+
+      const message = data?.message || data?.title || text || `Ошибка ${response.status}`;
+      status.textContent = `Не удалось обновить избранное: ${message}`;
+      return null;
+    }
+
+    return {
+      id: data.id ?? data.Id,
+      isFavorite: data.isFavorite ?? data.IsFavorite,
+    };
   } catch (error) {
     console.error(error);
-    status.textContent = "Не удалось обновить избранное.";
+    status.textContent = "Не удалось обновить избранное. Перезапусти API: dotnet run";
     return null;
   }
 }
@@ -537,7 +576,7 @@ async function loadProductSuggestions() {
       })
       .join("");
   } catch {
-    // suggestions are optional
+    console.error("Не удалось загрузить продукты.");
   }
 }
 
