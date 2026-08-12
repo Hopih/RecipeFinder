@@ -5,3 +5,5 @@ obj/
 *.suo
 appsettings.Development.json
 appsettings.*.local.json
+.env
+publish/

@@ -1,0 +1,12 @@
+**/.git
+**/.vs
+**/bin
+**/obj
+**/publish
+**/node_modules
+**/.cursor
+**/.env
+**/*.user
+**/*.suo
+**/docker-compose.yml
+**/*.md
