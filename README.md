@@ -1,215 +1,346 @@
-# RecipeFinder
+# 🍳 RecipeFinder
 
-> Введи продукты из холодильника — найди, что можно приготовить.
+<div align="center">
 
-Веб-приложение на **ASP.NET Core** + **PostgreSQL**: поиск рецептов по ингредиентам, фильтр сложности, избранное в БД и каталог продуктов.
+### Найди рецепт из продуктов, которые уже есть дома
 
----
+RecipeFinder подбирает блюда по ингредиентам, показывает недостающие продукты<br/>
+и сохраняет любимые рецепты отдельно для каждого пользователя.
 
-## Схема проекта
+[![Live Demo](https://img.shields.io/badge/Live_Demo-Открыть-22c55e?style=for-the-badge&logo=render&logoColor=white)](https://recipefinder-s9co.onrender.com)
+[![.NET](https://img.shields.io/badge/.NET-10-512BD4?style=for-the-badge&logo=dotnet)](https://dotnet.microsoft.com/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
+
+</div>
+
+> [!NOTE]
+> Демо размещено на бесплатном Render. После периода бездействия первый запуск может занять до 50 секунд.
+
+## ✨ Возможности
+
+- 🔎 Поиск рецептов по одному или нескольким ингредиентам
+- 📊 Сортировка по числу совпавших продуктов
+- 🧾 Отображение имеющихся и недостающих ингредиентов
+- 🎚️ Фильтрация по сложности: `easy`, `medium`, `hard`
+- ❤️ Персональное избранное для каждого пользователя
+- 👤 Регистрация, вход и выход из аккаунта
+- 🥕 Каталог продуктов с количеством подходящих рецептов
+- 📖 Подробные инструкции приготовления
+- 🌓 Светлая и тёмная темы
+- 🐳 Запуск приложения и PostgreSQL через Docker Compose
+- 🚀 Автоматический деплой из GitHub на Render
+
+## 🧱 Архитектура
 
 ```mermaid
-flowchart TB
-  subgraph Client["Браузер"]
-    Index["index.html<br/>поиск + рекомендации"]
-    Products["products.html<br/>каталог продуктов"]
-    Favorites["favorites.html<br/>избранное"]
-    JS["app.js / products.js / favorites.js"]
-  end
+flowchart LR
+    User([Пользователь])
 
-  subgraph Server["ASP.NET Core"]
-    Static["Static Files<br/>wwwroot"]
-    API["RecipesController<br/>/api/Recipes"]
-    EF["AppDbContext<br/>Entity Framework"]
-    Seeder["DbSeeder"]
-  end
+    subgraph Browser["Frontend · Browser"]
+        Pages["HTML pages<br/>Search · Products · Favorites · Auth"]
+        Scripts["Vanilla JavaScript<br/>Fetch API · DOM · localStorage"]
+        Styles["CSS<br/>Responsive UI · Themes"]
+    end
 
-  subgraph DB["PostgreSQL"]
-    Recipes[(Recipes)]
-    ProductsTable[(Products)]
-    Join[(Recipe ↔ Product)]
-  end
+    subgraph Backend["Backend · ASP.NET Core 10"]
+        Static["Static Files Middleware"]
+        Controller["RecipesController<br/>REST API"]
+        EF["Entity Framework Core<br/>AppDbContext"]
+        Seeder["Migrations + DbSeeder"]
+    end
 
-  Index --> JS
-  Products --> JS
-  Favorites --> JS
-  JS -->|"fetch JSON"| API
-  Index -.-> Static
-  Products -.-> Static
-  Favorites -.-> Static
-  API --> EF
-  Seeder --> EF
-  EF --> Recipes
-  EF --> ProductsTable
-  EF --> Join
+    subgraph Storage["Data · PostgreSQL 16"]
+        Recipes[(Recipes)]
+        Products[(Products)]
+        Users[(Users)]
+        Relations[(Many-to-many tables)]
+    end
+
+    User --> Pages
+    Pages --> Scripts
+    Styles --> Pages
+    Scripts -->|"HTTP / JSON"| Controller
+    Static --> Pages
+    Controller --> EF
+    Seeder --> EF
+    EF --> Recipes
+    EF --> Products
+    EF --> Users
+    EF --> Relations
 ```
 
----
-
-## Как работает поиск
+### Поток поиска
 
 ```mermaid
 sequenceDiagram
-  participant U as Пользователь
-  participant F as Frontend
-  participant C as RecipesController
-  participant DB as PostgreSQL
+    actor User as Пользователь
+    participant UI as Frontend
+    participant API as RecipesController
+    participant EF as Entity Framework
+    participant DB as PostgreSQL
 
-  U->>F: Добавляет продукты + фильтры
-  F->>C: POST /api/Recipes/search
-  C->>DB: Recipes + Products
-  DB-->>C: Список рецептов
-  C-->>F: Совпадения + missingProducts
-  F-->>U: Карточки и детали рецепта
+    User->>UI: Добавляет ингредиенты и сложность
+    UI->>API: POST /api/Recipes/search
+    API->>EF: Загружает Recipes + Products
+    EF->>DB: SQL-запрос
+    DB-->>EF: Рецепты и ингредиенты
+    EF-->>API: Модели
+    API->>API: Считает совпадения и недостающие продукты
+    API-->>UI: SearchRecipeDto[]
+    UI-->>User: Ранжированные карточки рецептов
 ```
 
----
+### Схема развёртывания
 
-## Модель данных
+```mermaid
+flowchart LR
+    Dev["Локальная разработка"] -->|git push| GitHub["GitHub · main"]
+    GitHub -->|Auto Deploy| Render["Render Web Service<br/>Docker · .NET 10"]
+    Render -->|Private Network| CloudDB[("Render PostgreSQL")]
+
+    Docker["Docker Compose"] --> LocalApp["RecipeFinder container"]
+    Docker --> LocalDB[("PostgreSQL container")]
+    LocalApp --> LocalDB
+```
+
+## 🗃️ Модель данных
 
 ```mermaid
 erDiagram
-  Recipe ||--o{ RecipeProduct : содержит
-  Product ||--o{ RecipeProduct : входит_в
+    USER }o--o{ RECIPE : favorites
+    RECIPE }o--o{ PRODUCT : ingredients
 
-  Recipe {
-    int Id
-    string Name
-    string Instructions
-    string ImageUrl
-    string Difficulty
-    bool IsFavorite
-  }
+    USER {
+        int Id PK
+        string Name
+        string Email
+        string Password
+        bool IsAdmin
+    }
 
-  Product {
-    int Id
-    string Name
-  }
+    RECIPE {
+        int Id PK
+        string Name
+        string Instructions
+        string ImageUrl
+        string Difficulty
+    }
+
+    PRODUCT {
+        int Id PK
+        string Name
+    }
 ```
 
-| Сущность | Поля |
-|----------|------|
-| **Recipe** | название, шаги, картинка, сложность (`easy` / `medium` / `hard`), избранное |
-| **Product** | название ингредиента |
-| Связь | many-to-many: рецепт ↔ продукты |
+`Recipe ↔ Product` и `User ↔ Recipe` — связи many-to-many, которые EF Core хранит в промежуточных таблицах.
 
----
+## 🧰 Технологии
 
-## Структура папок
+| Слой | Технологии |
+|---|---|
+| Backend | ASP.NET Core 10, C# |
+| ORM | Entity Framework Core 10 |
+| Database | PostgreSQL 16, Npgsql |
+| Frontend | HTML5, CSS3, Vanilla JavaScript |
+| API | REST, JSON, Swagger / OpenAPI |
+| Infrastructure | Docker, Docker Compose |
+| Hosting | Render Web Service + Render PostgreSQL |
+
+## 📁 Структура проекта
 
 ```text
 RecipeFinder/
 ├── Controllers/
-│   └── RecipesController.cs     # API
+│   └── RecipesController.cs        # REST API
+├── Data/
+│   ├── AppDbContext.cs             # EF Core context
+│   ├── DbSeeder.cs                 # Синхронизация каталога с БД
+│   ├── RecipeCatalog.cs            # Начальный каталог рецептов
+│   └── Migrations/                 # Миграции PostgreSQL
 ├── Models/
 │   ├── Recipe.cs
 │   ├── Product.cs
-│   └── RecipeSearchRequest.cs
-├── Data/
-│   ├── AppDbContext.cs
-│   ├── DbSeeder.cs
-│   └── Migrations/
+│   ├── User.cs
+│   └── *Request.cs                 # DTO входящих запросов
 ├── wwwroot/
-│   ├── index.html               # Главная
-│   ├── products.html            # Продукты
-│   ├── favorites.html           # Избранное
+│   ├── index.html                  # Поиск и рекомендации
+│   ├── products.html               # Каталог продуктов
+│   ├── favorites.html              # Избранное пользователя
+│   ├── authorization.html          # Вход и регистрация
 │   ├── css/site.css
 │   └── js/
 │       ├── app.js
-│       ├── products.js
-│       └── favorites.js
+│       ├── auth.js
+│       ├── authorization.js
+│       ├── favorites.js
+│       └── products.js
+├── Dockerfile
+├── docker-compose.yml
 ├── Program.cs
-└── README.md
+└── RecipeFinder.csproj
 ```
 
----
+## 🔌 API
 
-## API
+Базовый адрес: `/api/Recipes`
 
-| Метод | URL | Описание |
-|-------|-----|----------|
-| `GET` | `/api/Recipes` | Все рецепты |
-| `GET` | `/api/Recipes/products` | Все продукты |
-| `GET` | `/api/Recipes/favorites` | Избранные рецепты |
-| `POST` | `/api/Recipes/{id}/favorite` | Вкл / выкл избранное |
-| `POST` | `/api/Recipes/search` | Поиск по продуктам + сложность |
+| Метод | Endpoint | Назначение |
+|---|---|---|
+| `GET` | `/api/Recipes?userId={id}` | Получить все рецепты |
+| `GET` | `/api/Recipes/products` | Получить каталог продуктов |
+| `GET` | `/api/Recipes/favorites?userId={id}` | Избранное пользователя |
+| `POST` | `/api/Recipes/search` | Найти рецепты по ингредиентам |
+| `POST` | `/api/Recipes/{id}/favorite` | Добавить или убрать рецепт из избранного |
+| `POST` | `/api/Recipes/registration` | Зарегистрировать пользователя |
+| `POST` | `/api/Recipes/authorization` | Выполнить вход |
 
-Пример поиска:
+<details>
+<summary><b>Пример запроса поиска</b></summary>
 
 ```http
 POST /api/Recipes/search
 Content-Type: application/json
 
 {
-  "products": ["яйца", "молоко", "соль"],
-  "difficulty": "all"
+  "products": ["яйца", "молоко", "сыр"],
+  "difficulty": "all",
+  "userId": 1
 }
 ```
 
-Ответ содержит `haveProducts`, `missingProducts`, `hasAllIngredients` и `matchCount`.
+В ответе для каждого рецепта возвращаются:
 
----
+- `haveProducts` — найденные ингредиенты;
+- `missingProducts` — недостающие ингредиенты;
+- `matchCount` и `totalCount` — количество совпадений;
+- `hasAllIngredients` — достаточно ли выбранных продуктов;
+- `isFavorite` — находится ли рецепт в избранном пользователя.
 
-## Страницы
+</details>
 
-| Страница | Что умеет |
-|----------|-----------|
-| `/` | Поиск, теги, фильтры, рекомендации, детали рецепта |
-| `/products.html` | Каталог всех продуктов из БД |
-| `/favorites.html` | Рецепты с `IsFavorite = true` |
-| `/swagger` | Документация API (в Development) |
+<details>
+<summary><b>Пример переключения избранного</b></summary>
 
----
+```http
+POST /api/Recipes/12/favorite
+Content-Type: application/json
 
-## Запуск
+{
+  "userId": 1
+}
+```
+
+</details>
+
+## 🚀 Быстрый запуск через Docker
+
+### Требования
+
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/)
+- Docker Compose
+
+### Запуск
+
+```bash
+cp .env.example .env
+docker compose up --build -d
+```
+
+После запуска:
+
+- приложение: [http://localhost:8080](http://localhost:8080);
+- PostgreSQL с хоста: `localhost:5433`;
+- внутри Docker-сети база доступна как `db:5432`.
+
+Проверить контейнеры:
+
+```bash
+docker compose ps
+```
+
+Остановить:
+
+```bash
+docker compose down
+```
+
+Удалить контейнеры вместе с данными БД:
+
+```bash
+docker compose down -v
+```
+
+## 💻 Запуск без Docker
 
 ### Требования
 
 - [.NET 10 SDK](https://dotnet.microsoft.com/download)
 - PostgreSQL
 
-### Строка подключения
+Укажи строку подключения через `appsettings.Development.json` или переменную окружения:
 
-В `appsettings.Development.json` (или `appsettings.json`):
-
-```json
-{
-  "ConnectionStrings": {
-    "DefaultConnection": "Host=localhost;Port=5432;Database=recipe_finder;Username=postgres;Password=YOUR_PASSWORD"
-  }
-}
+```text
+ConnectionStrings__DefaultConnection=Host=localhost;Port=5432;Database=recipe_finder;Username=postgres;Password=YOUR_PASSWORD
 ```
 
-### Команды
+Запусти приложение:
 
 ```bash
-dotnet ef database update
+dotnet restore
 dotnet run --launch-profile RecipeFinder
 ```
 
-Открой: **http://localhost:5080/**
+Локальный адрес: [http://localhost:5080](http://localhost:5080).
 
-При старте приложение само применяет миграции и заполняет тестовые рецепты через `DbSeeder`.
+При запуске приложение автоматически:
+
+1. применяет EF Core migrations;
+2. создаёт необходимые таблицы;
+3. добавляет и обновляет каталог рецептов через `DbSeeder`.
+
+## ☁️ Деплой на Render
+
+Проект уже настроен для автоматического деплоя:
+
+1. изменения отправляются в ветку `main`;
+2. Render собирает образ по `Dockerfile`;
+3. приложение запускается на порту `10000`;
+4. строка подключения передаётся через `ConnectionStrings__DefaultConnection`;
+5. после успешного запуска миграции применяются автоматически.
+
+```bash
+git add .
+git commit -m "Describe your changes"
+git push
+```
+
+Live-версия: **https://recipefinder-s9co.onrender.com**
+
+## ⚠️ Важно для production
+
+Текущая авторизация сделана в учебных целях. Перед реальным production-запуском необходимо:
+
+- хранить пароли только в виде безопасного хеша (`PasswordHasher`, Argon2 или BCrypt);
+- заменить передачу `userId` клиентом на cookie-сессию или JWT;
+- добавить валидацию DTO и ограничение частоты запросов;
+- не хранить секреты в Git — использовать переменные окружения;
+- настроить HTTPS, резервные копии БД и ротацию credentials.
+
+## 🛣️ Идеи для развития
+
+- [ ] JWT или cookie-аутентификация
+- [ ] Хеширование паролей
+- [ ] Панель администратора для управления рецептами
+- [ ] Загрузка собственных изображений
+- [ ] Пагинация и полнотекстовый поиск
+- [ ] Оценки и комментарии пользователей
+- [ ] Автоматические тесты и CI
 
 ---
 
-## Стек
+<div align="center">
 
-![.NET](https://img.shields.io/badge/.NET-10-512BD4?style=flat-square&logo=dotnet)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-EF_Core-4169E1?style=flat-square&logo=postgresql&logoColor=white)
-![Swagger](https://img.shields.io/badge/Swagger-OpenAPI-85EA2D?style=flat-square&logo=swagger&logoColor=black)
+Сделано на **ASP.NET Core**, **PostgreSQL** и **Vanilla JavaScript**
 
-- **Backend:** ASP.NET Core Web API  
-- **ORM:** Entity Framework Core + Npgsql  
-- **Frontend:** HTML / CSS / Vanilla JS (`wwwroot`)  
-- **API docs:** Swashbuckle (Swagger)
-
----
-
-## Возможности
-
-- Частичный матч продуктов: показываем, чего не хватает  
-- Фильтр по сложности и доп. фильтры на фронте  
-- Избранное хранится в PostgreSQL  
-- Каталог продуктов с переходом в поиск  
-- Тёмная / светлая тема
+</div>
