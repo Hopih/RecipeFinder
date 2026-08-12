@@ -14,6 +14,8 @@ WORKDIR /app
 
 # Render по умолчанию шлёт трафик на порт 10000
 ENV ASPNETCORE_URLS=http://+:10000
+# Free-инстанс Render: отключаем file watchers (лимит inotify)
+ENV DOTNET_HOSTBUILDER__RELOADCONFIGONCHANGE=false
 EXPOSE 10000
 
 COPY --from=build /app/publish .
