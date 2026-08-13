@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Продукты — RecipeFinder</title>
+  <title>Рецепты — RecipeFinder</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Syne:wght@600;700;800&display=swap" rel="stylesheet" />
@@ -25,8 +25,8 @@
 
       <nav class="nav" aria-label="Главное меню">
         <a class="nav-link" href="/">Главная</a>
-        <a class="nav-link" href="/recipes.html">Рецепты</a>
-        <a class="nav-link is-active" href="/products.html">Продукты</a>
+        <a class="nav-link is-active" href="/recipes.html">Рецепты</a>
+        <a class="nav-link" href="/products.html">Продукты</a>
         <a class="nav-link" href="/favorites.html">Избранное</a>
         <a class="nav-link" href="/#about">О проекте</a>
       </nav>
@@ -48,28 +48,37 @@
     </header>
 
     <section class="page-hero">
-      <h1>Все продукты</h1>
-      <p class="page-lead">Список ингредиентов из базы. Кликни — откроется поиск с этим продуктом.</p>
+      <h1>Все рецепты</h1>
+      <p class="page-lead">Каталог блюд из базы. Кликни карточку — откроются ингредиенты и шаги.</p>
     </section>
 
     <div class="products-toolbar">
       <label class="products-search">
-        <span class="sr-only">Поиск по продуктам</span>
-        <input id="products-filter" type="search" placeholder="Найти продукт…" autocomplete="off" />
+        <span class="sr-only">Поиск по рецептам</span>
+        <input id="recipes-filter" type="search" placeholder="Найти рецепт…" autocomplete="off" />
       </label>
-      <span id="products-count" class="fav-count">0</span>
+      <span id="recipes-count" class="fav-count">0</span>
     </div>
 
     <p id="status" class="status" aria-live="polite">Загружаем…</p>
-    <section id="products-grid" class="products-grid" aria-label="Список продуктов"></section>
+
+    <section class="workspace fav-workspace" id="workspace" hidden>
+      <div class="results-pane">
+        <div class="pane-head">
+          <h2>Каталог</h2>
+        </div>
+        <div id="recipes-container" class="results results--fav" aria-label="Список рецептов"></div>
+      </div>
+      <aside id="detail" class="detail-pane" aria-label="Детали рецепта" hidden></aside>
+    </section>
 
     <section class="empty-fav" id="empty" hidden>
-      <p>Продукты не найдены.</p>
-      <a class="btn-primary" href="/">На главную</a>
+      <p>Рецепты не найдены.</p>
+      <a class="btn-fav-browse" href="/">Найти по продуктам</a>
     </section>
   </div>
 
   <script src="/js/auth.js"></script>
-  <script src="/js/products.js"></script>
+  <script src="/js/recipes.js"></script>
 </body>
 </html>
