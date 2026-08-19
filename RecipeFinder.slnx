@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="RecipeFinder.csproj" />
+  <Project Path="RecipeFinder.Tests/RecipeFinder.Tests.csproj" />
+</Solution>
