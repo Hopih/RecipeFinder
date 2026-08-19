@@ -60,6 +60,17 @@ public class RecipesController : ControllerBase
         return Ok(user.Favorites.Select(recipe => MapRecipe(recipe, true)));
     }
 
+    [HttpGet("recipes")]
+    public async Task<IActionResult> GetRecipes()
+    {
+        var recipes = await _db.Recipes
+            .Include(recipe => recipe.Products)
+            .OrderBy(recipe => recipe.Name)
+            .ToListAsync();
+            
+        return Ok(recipes.Select(recipe => MapRecipe(recipe, false)));
+    }
+
     [HttpPost("{id:int}/favorite")]
     public async Task<IActionResult> ToggleFavorite(int id, [FromBody] FavoriteRequest? request)
     {
