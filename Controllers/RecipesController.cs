@@ -60,6 +60,8 @@ public class RecipesController : ControllerBase
         return Ok(user.Favorites.Select(recipe => MapRecipe(recipe, true)));
     }
 
+    // NOTE: not called by the current frontend (index/recipes pages use GET / and POST /search instead).
+    // Kept for now since removing a public API endpoint is a breaking change — flag for cleanup if truly unused.
     [HttpGet("recipes")]
     public async Task<IActionResult> GetRecipes()
     {
@@ -113,6 +115,8 @@ public class RecipesController : ControllerBase
         return Ok(new { recipe.Id, IsFavorite = isFavorite });
     }
 
+    // Core search: matches recipes that contain at least one of the requested ingredients,
+    // then ranks them so "closest to cookable right now" surfaces first.
     [HttpPost("search")]
     public async Task<IActionResult> SearchByProducts([FromBody] RecipeSearchRequest request)
     {
@@ -129,6 +133,9 @@ public class RecipesController : ControllerBase
         var difficulty = (request.Difficulty ?? "all").Trim().ToLower();
         var favoriteIds = await GetFavoriteIdsAsync(request.UserId);
 
+        // Loaded fully into memory before filtering — fine for a small seeded catalog,
+        // but won't scale well; consider pushing the filter into the SQL query if the
+        // recipe/product tables grow significantly.
         var recipes = await _db.Recipes
             .Include(recipe => recipe.Products)
             .ToListAsync();
@@ -138,6 +145,8 @@ public class RecipesController : ControllerBase
                 (string.Equals(recipe.Difficulty, difficulty, StringComparison.OrdinalIgnoreCase) || difficulty == "all") &&
                 recipe.Products.Any(product => normalized.Contains(product.Name.ToLower())))
             .Select(recipe => MapSearchRecipe(recipe, normalized, favoriteIds.Contains(recipe.Id)))
+            // Ranking: recipes you can fully cook right now first, then by how many
+            // ingredients matched, then by fewest missing ingredients.
             .OrderByDescending(recipe => recipe.HasAllIngredients)
             .ThenByDescending(recipe => recipe.MatchCount)
             .ThenBy(recipe => recipe.TotalCount - recipe.MatchCount)
@@ -146,6 +155,9 @@ public class RecipesController : ControllerBase
         return Ok(matched);
     }
 
+    // SECURITY: passwords are compared in plain text here. This is fine for a learning project,
+    // but must NOT ship to production as-is — hash passwords with ASP.NET Core's PasswordHasher
+    // (or BCrypt/Argon2) and compare hashes instead. See "Important for production" in README.
     [HttpPost("authorization")]
     public async Task<IActionResult> Authorization([FromBody] AuthorizationRequest request)
     {
@@ -169,6 +181,8 @@ public class RecipesController : ControllerBase
             return BadRequest("Пользователь с таким email уже существует");
         }
 
+        // SECURITY: storing the raw password. Same caveat as Authorization() above — replace
+        // with a hashed password before any real deployment.
         var user = new User
         {
             Name = request.Name.Trim(),

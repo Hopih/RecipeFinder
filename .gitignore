@@ -1,9 +1,69 @@
+## .NET
 bin/
 obj/
-.vs/
 *.user
 *.suo
+*.userosscache
+*.sln.docstates
+
+## Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Ww][Ii][Nn]32/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Oo]ut/
+msbuild.log
+msbuild.err
+msbuild.wrn
+
+## Visual Studio / Rider / VS Code
+.vs/
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln.iml
+
+## User-specific configuration (secrets, local overrides)
 appsettings.Development.json
 appsettings.*.local.json
+secrets.json
+
+## Environment variables
 .env
-publish/
+.env.local
+.env.*.local
+
+## EF Core
+*.db
+*.db-shm
+*.db-wal
+
+## Logs
+*.log
+logs/
+
+## Docker
+docker-compose.override.yml
+
+## OS files
+.DS_Store
+Thumbs.db
+
+## Node (если позже появится сборка фронтенда)
+node_modules/
+npm-debug.log*
+
+## Test results
+[Tt]est[Rr]esult*/
+*.trx
+*.coverage
+*.coveragexml
+coverage/
