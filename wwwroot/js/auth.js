@@ -1,3 +1,8 @@
+// Client-side "session" for this learning project: the logged-in user is just
+// cached in localStorage after a successful /authorization call, and userId is
+// sent with each request that needs it (search, favorites, etc). There's no
+// server-side session/token, so this trusts whatever userId the browser sends —
+// fine for local demos, not something to rely on for real auth.
 const USER_KEY = "recipefinder:user";
 
 const avatar = document.getElementById("user-avatar");

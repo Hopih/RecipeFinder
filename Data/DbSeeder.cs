@@ -3,6 +3,10 @@ using RecipeFinder.Models;
 
 namespace RecipeFinder.Data;
 
+// Runs on every app startup (see Program.cs) to keep the database in sync with the
+// hardcoded catalog in RecipeCatalog.cs: adds missing products/recipes, fixes a couple
+// of legacy names, and refreshes recipe details that changed in the catalog. Idempotent —
+// safe to run repeatedly since every step checks what already exists before inserting.
 public static class DbSeeder
 {
     // Старые названия рецептов в базе -> исправленные названия из каталога.

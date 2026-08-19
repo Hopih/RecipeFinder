@@ -1,37 +1,41 @@
-# 🍳 RecipeFinder
+# RecipeFinder
 
-<div align="center">
+Веб-приложение для подбора рецептов по продуктам, которые уже есть дома. Показывает, каких ингредиентов не хватает, позволяет фильтровать по сложности и сохранять рецепты в избранное для каждого пользователя.
 
-### Найди рецепт из продуктов, которые уже есть дома
+Демо: https://recipefinder-s9co.onrender.com (бесплатный тариф Render, после простоя первый запрос может идти до 50 секунд).
 
-RecipeFinder подбирает блюда по ингредиентам, показывает недостающие продукты<br/>
-и сохраняет любимые рецепты отдельно для каждого пользователя.
+Стек: ASP.NET Core 10, Entity Framework Core, PostgreSQL, ванильный JavaScript на фронтенде, Docker Compose для локального запуска.
 
-[![Live Demo](https://img.shields.io/badge/Live_Demo-Открыть-22c55e?style=for-the-badge&logo=render&logoColor=white)](https://recipefinder-s9co.onrender.com)
-[![.NET](https://img.shields.io/badge/.NET-10-512BD4?style=for-the-badge&logo=dotnet)](https://dotnet.microsoft.com/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
-[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
+## Содержание
 
-</div>
+- [Возможности](#возможности)
+- [Архитектура](#архитектура)
+- [Модель данных](#модель-данных)
+- [Структура проекта](#структура-проекта)
+- [API](#api)
+- [Запуск через Docker](#запуск-через-docker)
+- [Запуск без Docker](#запуск-без-docker)
+- [Деплой на Render](#деплой-на-render)
+- [Важно перед production](#важно-перед-production)
+- [Тесты](#тесты)
+- [Контрибьютинг](#контрибьютинг)
+- [Идеи для развития](#идеи-для-развития)
 
-> [!NOTE]
-> Демо размещено на бесплатном Render. После периода бездействия первый запуск может занять до 50 секунд.
+## Возможности
 
-## ✨ Возможности
+- Поиск рецептов по одному или нескольким ингредиентам
+- Ранжирование результатов по числу совпавших продуктов
+- Список имеющихся и недостающих ингредиентов для каждого рецепта
+- Фильтр по сложности: `easy`, `medium`, `hard`
+- Персональное избранное для каждого пользователя
+- Регистрация, вход и выход из аккаунта
+- Каталог продуктов с числом подходящих рецептов
+- Подробные инструкции приготовления
+- Светлая и тёмная тема интерфейса
+- Запуск приложения и PostgreSQL через Docker Compose
+- Автоматический деплой из GitHub на Render
 
-- 🔎 Поиск рецептов по одному или нескольким ингредиентам
-- 📊 Сортировка по числу совпавших продуктов
-- 🧾 Отображение имеющихся и недостающих ингредиентов
-- 🎚️ Фильтрация по сложности: `easy`, `medium`, `hard`
-- ❤️ Персональное избранное для каждого пользователя
-- 👤 Регистрация, вход и выход из аккаунта
-- 🥕 Каталог продуктов с количеством подходящих рецептов
-- 📖 Подробные инструкции приготовления
-- 🌓 Светлая и тёмная темы
-- 🐳 Запуск приложения и PostgreSQL через Docker Compose
-- 🚀 Автоматический деплой из GitHub на Render
-
-## 🧱 Архитектура
+## Архитектура
 
 ```mermaid
 flowchart LR
@@ -104,7 +108,7 @@ flowchart LR
     LocalApp --> LocalDB
 ```
 
-## 🗃️ Модель данных
+## Модель данных
 
 ```mermaid
 erDiagram
@@ -133,9 +137,7 @@ erDiagram
     }
 ```
 
-`Recipe ↔ Product` и `User ↔ Recipe` — связи many-to-many, которые EF Core хранит в промежуточных таблицах.
-
-## 🧰 Технологии
+`Recipe ↔ Product` и `User ↔ Recipe` — связи many-to-many, EF Core хранит их в промежуточных таблицах.
 
 | Слой | Технологии |
 |---|---|
@@ -147,7 +149,7 @@ erDiagram
 | Infrastructure | Docker, Docker Compose |
 | Hosting | Render Web Service + Render PostgreSQL |
 
-## 📁 Структура проекта
+## Структура проекта
 
 ```text
 RecipeFinder/
@@ -181,7 +183,7 @@ RecipeFinder/
 └── RecipeFinder.csproj
 ```
 
-## 🔌 API
+## API
 
 Базовый адрес: `/api/Recipes`
 
@@ -196,7 +198,7 @@ RecipeFinder/
 | `POST` | `/api/Recipes/authorization` | Выполнить вход |
 
 <details>
-<summary><b>Пример запроса поиска</b></summary>
+<summary>Пример запроса поиска</summary>
 
 ```http
 POST /api/Recipes/search
@@ -211,16 +213,16 @@ Content-Type: application/json
 
 В ответе для каждого рецепта возвращаются:
 
-- `haveProducts` — найденные ингредиенты;
-- `missingProducts` — недостающие ингредиенты;
-- `matchCount` и `totalCount` — количество совпадений;
-- `hasAllIngredients` — достаточно ли выбранных продуктов;
-- `isFavorite` — находится ли рецепт в избранном пользователя.
+- `haveProducts` — найденные ингредиенты
+- `missingProducts` — недостающие ингредиенты
+- `matchCount` и `totalCount` — количество совпадений
+- `hasAllIngredients` — достаточно ли выбранных продуктов
+- `isFavorite` — находится ли рецепт в избранном пользователя
 
 </details>
 
 <details>
-<summary><b>Пример переключения избранного</b></summary>
+<summary>Пример переключения избранного</summary>
 
 ```http
 POST /api/Recipes/12/favorite
@@ -233,14 +235,9 @@ Content-Type: application/json
 
 </details>
 
-## 🚀 Быстрый запуск через Docker
+## Запуск через Docker
 
-### Требования
-
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/)
-- Docker Compose
-
-### Запуск
+Требуется [Docker Desktop](https://www.docker.com/products/docker-desktop/) с Docker Compose.
 
 ```bash
 cp .env.example .env
@@ -249,9 +246,9 @@ docker compose up --build -d
 
 После запуска:
 
-- приложение: [http://localhost:8080](http://localhost:8080);
-- PostgreSQL с хоста: `localhost:5433`;
-- внутри Docker-сети база доступна как `db:5432`.
+- приложение: http://localhost:8080
+- PostgreSQL с хоста: `localhost:5433`
+- внутри Docker-сети база доступна как `db:5432`
 
 Проверить контейнеры:
 
@@ -265,49 +262,36 @@ docker compose ps
 docker compose down
 ```
 
-Удалить контейнеры вместе с данными БД:
+Остановить и удалить данные БД:
 
 ```bash
 docker compose down -v
 ```
 
-## 💻 Запуск без Docker
+## Запуск без Docker
 
-### Требования
+Требуется [.NET 10 SDK](https://dotnet.microsoft.com/download) и PostgreSQL.
 
-- [.NET 10 SDK](https://dotnet.microsoft.com/download)
-- PostgreSQL
-
-Укажи строку подключения через `appsettings.Development.json` или переменную окружения:
+Строка подключения задаётся через `appsettings.Development.json` или переменную окружения:
 
 ```text
 ConnectionStrings__DefaultConnection=Host=localhost;Port=5432;Database=recipe_finder;Username=postgres;Password=YOUR_PASSWORD
 ```
 
-Запусти приложение:
+Запуск:
 
 ```bash
 dotnet restore
 dotnet run --launch-profile RecipeFinder
 ```
 
-Локальный адрес: [http://localhost:5080](http://localhost:5080).
+Локальный адрес: http://localhost:5080
 
-При запуске приложение автоматически:
+При старте приложение автоматически применяет EF Core migrations, создаёт таблицы и заполняет каталог рецептов через `DbSeeder`.
 
-1. применяет EF Core migrations;
-2. создаёт необходимые таблицы;
-3. добавляет и обновляет каталог рецептов через `DbSeeder`.
+## Деплой на Render
 
-## ☁️ Деплой на Render
-
-Проект уже настроен для автоматического деплоя:
-
-1. изменения отправляются в ветку `main`;
-2. Render собирает образ по `Dockerfile`;
-3. приложение запускается на порту `10000`;
-4. строка подключения передаётся через `ConnectionStrings__DefaultConnection`;
-5. после успешного запуска миграции применяются автоматически.
+Проект настроен на автоматический деплой: пуш в `main` запускает сборку по `Dockerfile`, приложение поднимается на порту `10000`, строка подключения передаётся через `ConnectionStrings__DefaultConnection`, миграции применяются автоматически после старта.
 
 ```bash
 git add .
@@ -315,19 +299,39 @@ git commit -m "Describe your changes"
 git push
 ```
 
-Live-версия: **https://recipefinder-s9co.onrender.com**
+Live-версия: https://recipefinder-s9co.onrender.com
 
-## ⚠️ Важно для production
+## Важно перед production
 
-Текущая авторизация сделана в учебных целях. Перед реальным production-запуском необходимо:
+Текущая авторизация сделана в учебных целях. Перед реальным production-запуском нужно:
 
-- хранить пароли только в виде безопасного хеша (`PasswordHasher`, Argon2 или BCrypt);
-- заменить передачу `userId` клиентом на cookie-сессию или JWT;
-- добавить валидацию DTO и ограничение частоты запросов;
-- не хранить секреты в Git — использовать переменные окружения;
-- настроить HTTPS, резервные копии БД и ротацию credentials.
+- хранить пароли только в виде хеша (`PasswordHasher`, Argon2 или BCrypt), а не в открытом виде
+- заменить передачу `userId` клиентом на cookie-сессию или JWT
+- добавить валидацию DTO и ограничение частоты запросов
+- не хранить секреты в Git — использовать переменные окружения
+- настроить HTTPS, резервные копии БД и ротацию credentials
 
-## 🛣️ Идеи для развития
+Эти места в коде помечены комментариями `SECURITY:` — см. `RecipesController.cs`, `Models/User.cs`, `wwwroot/js/auth.js`.
+
+## Тесты
+
+Автоматических тестов пока нет. План для первого захода:
+
+1. Завести тестовый проект: `dotnet new xunit -n RecipeFinder.Tests`, подключить его в решение.
+2. Начать с юнит-тестов на чистую логику без БД: ранжирование результатов в `RecipesController.SearchByProducts` (порядок по `HasAllIngredients` → `MatchCount` → недостающим продуктам) и разбор ингредиентов в `wwwroot/js/app.js`.
+3. Для эндпоинтов, завязанных на БД (`GetFavorites`, `ToggleFavorite`, `Registration`, `Authorization`), использовать `Microsoft.EntityFrameworkCore.InMemory` вместо реального PostgreSQL.
+4. Покрыть граничные случаи: пустой список продуктов при поиске, несуществующий `userId`, повторная регистрация с занятым email.
+5. Подключить `dotnet test` в CI.
+
+## Контрибьютинг
+
+1. Форкнуть репозиторий, склонировать себе.
+2. Поднять проект через Docker (`docker compose up --build`) — быстрее всего для локальной работы.
+3. Завести отдельную ветку под задачу: `git checkout -b feature/short-description`.
+4. Открыть PR с описанием, что изменилось и зачем. Список ниже — источник задач для первого PR.
+5. Небольшой PR на один пункт из списка — уже нормальный вклад, не обязательно делать всё сразу.
+
+## Идеи для развития
 
 - [ ] JWT или cookie-аутентификация
 - [ ] Хеширование паролей
@@ -335,12 +339,5 @@ Live-версия: **https://recipefinder-s9co.onrender.com**
 - [ ] Загрузка собственных изображений
 - [ ] Пагинация и полнотекстовый поиск
 - [ ] Оценки и комментарии пользователей
-- [ ] Автоматические тесты и CI
-
----
-
-<div align="center">
-
-Сделано на **ASP.NET Core**, **PostgreSQL** и **Vanilla JavaScript**
-
-</div>
+- [ ] Автоматические тесты (xUnit + EF Core InMemory) и CI с `dotnet test`
+- [ ] Удалить или переиспользовать неиспользуемый `GET /api/Recipes/recipes` в `RecipesController`
