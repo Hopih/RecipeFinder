@@ -69,11 +69,13 @@ form.addEventListener("submit", async (event) => {
 
 async function searchRecipes() {
   if (ingredients.length === 0) {
+    status.classList.add("is-error");
     status.textContent = "Добавь хотя бы один продукт.";
     workspace.hidden = true;
     return;
   }
 
+  status.classList.remove("is-error");
   status.textContent = "Ищем рецепты…";
   results.innerHTML = "";
   detail.hidden = true;
